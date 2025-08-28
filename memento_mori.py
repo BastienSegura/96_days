@@ -20,22 +20,27 @@ MAX_HISTORY = 60                      # nombre de fichiers d’archives à conse
 
 # Lisibilité
 USER_SCALE = 1.2
-FONT_BASE     = ("Segoe UI", int(12*USER_SCALE))
-FONT_MUTED    = ("Segoe UI", int(11*USER_SCALE))
-FONT_DAYNUM   = ("Segoe UI", int(14*USER_SCALE), "bold")
-FONT_TITLE    = ("Segoe UI", int(20*USER_SCALE), "bold")
-FONT_SUBTITLE = ("Segoe UI", int(12*USER_SCALE))
-FONT_NOTE_HDR = ("Segoe UI", int(14*USER_SCALE), "bold")
+# Use Apple's SF Pro Text font when available to give the interface a
+# macOS look. Tk falls back to the default font if the family is missing
+# which keeps the app functional on other platforms.
+FONT_FAMILY   = "SF Pro Text"
+FONT_BASE     = (FONT_FAMILY, int(13 * USER_SCALE))
+FONT_MUTED    = (FONT_FAMILY, int(12 * USER_SCALE))
+FONT_DAYNUM   = (FONT_FAMILY, int(16 * USER_SCALE), "bold")
+FONT_TITLE    = (FONT_FAMILY, int(24 * USER_SCALE), "bold")
+FONT_SUBTITLE = (FONT_FAMILY, int(13 * USER_SCALE))
+FONT_NOTE_HDR = (FONT_FAMILY, int(16 * USER_SCALE), "bold")
 
-COLOR_BG        = "#0e0f12"
-COLOR_PANEL     = "#151821"
-COLOR_TEXT      = "#e6e6e6"
-COLOR_MUTED     = "#a9acb2"
-COLOR_PAST      = "#2a2f3a"
-COLOR_TODAY     = "#1f6feb"
-COLOR_FUTURE    = "#1b2130"
-COLOR_NOTE_DOT  = "#ffd166"
-COLOR_GRID_LINE = "#222733"
+# Apple inspired dark palette
+COLOR_BG        = "#1c1c1e"  # system background
+COLOR_PANEL     = "#2c2c2e"  # secondary background
+COLOR_TEXT      = "#f2f2f7"  # primary label
+COLOR_MUTED     = "#8e8e93"  # secondary label
+COLOR_PAST      = "#3a3a3c"
+COLOR_TODAY     = "#0a84ff"  # system blue
+COLOR_FUTURE    = "#2c2c2e"
+COLOR_NOTE_DOT  = "#ff9f0a"  # system orange
+COLOR_GRID_LINE = "#3a3a3c"
 
 WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 
@@ -151,7 +156,9 @@ class MementoApp(tk.Tk):
 
         # Style ttk
         style = ttk.Style(self)
-        for candidate in ("vista", "clam", "alt", "default"):
+        # Try to use the native macOS theme when available, otherwise
+        # gracefully fall back to generic themes.
+        for candidate in ("aqua", "vista", "clam", "alt", "default"):
             try:
                 style.theme_use(candidate)
                 break
@@ -161,7 +168,21 @@ class MementoApp(tk.Tk):
         style.configure("Muted.TLabel", foreground=COLOR_MUTED, background=COLOR_BG, font=FONT_MUTED)
         style.configure("Card.TFrame", background=COLOR_PANEL)
         style.configure("TFrame", background=COLOR_BG)
-        style.configure("TButton", padding=6)
+        style.configure("TButton", padding=6, font=FONT_BASE)
+        # Accent button used for primary actions
+        style.configure(
+            "Accent.TButton",
+            padding=6,
+            font=FONT_BASE,
+            background=COLOR_TODAY,
+            foreground="white",
+            borderwidth=0,
+        )
+        style.map(
+            "Accent.TButton",
+            background=[("active", COLOR_TODAY)],
+            foreground=[("disabled", COLOR_MUTED)],
+        )
 
         # FS
         SAVES_DIR.mkdir(parents=True, exist_ok=True)
@@ -278,8 +299,15 @@ class MementoApp(tk.Tk):
         header.pack(fill="x", pady=(10, 6))
         ttk.Label(header, text=day_date.strftime("%A %d %B %Y"), font=FONT_NOTE_HDR).pack(anchor="w", padx=16)
 
-        text = tk.Text(self.page_editor, wrap="word", bg="#0f121a", fg=COLOR_TEXT,
-                       insertbackground=COLOR_TEXT, relief="flat", font=FONT_BASE)
+        text = tk.Text(
+            self.page_editor,
+            wrap="word",
+            bg=COLOR_PANEL,
+            fg=COLOR_TEXT,
+            insertbackground=COLOR_TEXT,
+            relief="flat",
+            font=FONT_BASE,
+        )
         text.pack(fill="both", expand=True, padx=16, pady=8)
 
         key = day_date.isoformat()
@@ -288,7 +316,12 @@ class MementoApp(tk.Tk):
 
         btns = ttk.Frame(self.page_editor, style="TFrame")
         btns.pack(fill="x", padx=16, pady=10)
-        save_btn = ttk.Button(btns, text="💾 Sauvegarder", command=lambda: self._save_and_back(day_date, text))
+        save_btn = ttk.Button(
+            btns,
+            text="Sauvegarder",
+            style="Accent.TButton",
+            command=lambda: self._save_and_back(day_date, text),
+        )
         save_btn.pack(side="left")
         close_btn = ttk.Button(btns, text="Annuler", command=self.show_calendar)
         close_btn.pack(side="right")
